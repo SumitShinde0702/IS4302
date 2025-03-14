@@ -62,3 +62,8 @@ Interacts with the Ticket contract via restricted transfer functions, ensuring t
 
 Things to add:
 Maybe add royalties? % of each mint/transaction on marketplace
+ticket cap tagged to ticket instead
+create extra contract that locks funds + voting
+implement whitelist of organisers (business logic: organisers who want to list have to send in their address and other details for approval, admin will add the address to the whitelist (probz just another mapping)
+think about minting & sending as compared to batch mint from organiser & transfer from organiser's address to buyers
+timelock function vs voting start & end
