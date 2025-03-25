@@ -84,8 +84,6 @@ contract Marketplace is Ownable, ReentrancyGuard {
         emit OfficialTicketPurchased(msg.sender, eventContractInstance.eventName(), listingId, quantity);
     } 
 
-    // things to think about: how to handle ticket legitimacy checks? when to check? should be during create listing for resale purposes
-
     /// @notice lists tickets currently owned for resale to the general population
     ///         can consider creating an array of addresses/usernames to allow targeted sales, as direct transfers introduces 
     ///         quite a bit of complexity, so i may not want to implement that. can consider next time

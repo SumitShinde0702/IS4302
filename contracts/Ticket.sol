@@ -19,14 +19,16 @@ contract Ticket is ERC1155, Ownable {
         _mint(msg.sender, NORMAL_TICKET, _numberOfTickets, "");
     }
 
-    /// @notice Sets the event contract address that is tied to this ticket.
+    /// @notice Sets the event contract address that is tied to this ticket & allows the event contract to transfer tickets on behalf of organiser
     /// @param _eventContract The marketplace contract address.
     function setEventContract(address _eventContract) external onlyOwner {
         require (eventContract == address(0), "Event contract already set");
         eventContract = _eventContract;
+        setApprovalForAll(eventContract, true);
     }
 
     /// @notice Sets the ticket price for a given type of ticket (currently only 1 type, Id = 0)
+    ///         currently the currency is in ether lol, should be changed at a later stage
     function setTicketPrice(uint256 ticketId, uint256 ticketPrice) external onlyOwner {
         require (ticketPrice != 0, "Ticket price cannot be 0");
         ticketPrices[ticketId] = ticketPrice;
@@ -43,21 +45,22 @@ contract Ticket is ERC1155, Ownable {
         address to,
         uint256 id,
         uint256 amount,
-        bytes memory data
+        bytes memory _data
     ) public override {
-        require(msg.sender == eventContract, "Only event contract can transfer tickets");
-        super.safeTransferFrom(from, to, id, amount, data);
+        require(msg.sender == eventContract || msg.sender == owner(), "Only event contract or owner can transfer tickets");
+        super.safeTransferFrom(from, to, id, amount, _data);
     }
 
     /// @notice Overrides safeBatchTransferFrom to restrict batch transfers.
-    function safeBatchTransferFrom(
-        address from,
-        address to,
-        uint256[] memory ids,
-        uint256[] memory amounts,
-        bytes memory data
-    ) public override {
-        require(msg.sender == eventContract, "Only event contract can transfer tickets");
-        super.safeBatchTransferFrom(from, to, ids, amounts, data);
-    }
+    ///         not used for now ~
+    // function safeBatchTransferFrom(
+    //     address from,
+    //     address to,
+    //     uint256[] memory ids,
+    //     uint256[] memory amounts,
+    //     bytes memory data
+    // ) public override {
+    //     require(msg.sender == eventContract, "Only event contract can transfer tickets");
+    //     super.safeBatchTransferFrom(from, to, ids, amounts, data);
+    // }
 }

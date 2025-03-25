@@ -22,13 +22,15 @@ interface ITicketContract {
 contract Event is Ownable, ReentrancyGuard {
     string public eventName;
 
-    enum EventPhase { SALE, VOTE, END }
+    enum EventPhase { PRESALE, SALE, EVENT, VOTE, END }
     EventPhase public phase;
 
     ITicketContract public ticketContract;
     address public organiser;
     address public marketPlace;
+    uint256 public saleDate;
     uint256 public eventDate;
+    uint256 public votingPeriodStart;
     uint256 public votingPeriodEnd;
     uint256 public refundThreshold;
     uint256 public totalTicketsSold;
@@ -49,9 +51,12 @@ contract Event is Ownable, ReentrancyGuard {
         eventName = _eventName;
         organiser = msg.sender;
         eventDate = _eventDate;
-        votingPeriodEnd = _eventDate + 3 days; // arbitrary voting period for now, but seems reasonable enough
+        saleDate = _eventDate - 30 days; // arbitrary for now, can pass in as a constructor variable
+        votingPeriodStart = _eventDate + 3 days; // arbitrary event duration for now, but seems reasonable enough
+        votingPeriodEnd = votingPeriodStart + 3 days; // arbitrary voting period for now, but seems reasonable enough
+
         refundThreshold = 90; // arbitrary value for now, might be passed in as a constructor value later on
-        phase = EventPhase.SALE;
+        phase = EventPhase.PRESALE;
         ticketContract = ITicketContract(_ticketContract);
         marketPlace =_marketPlace;
     }
@@ -62,15 +67,19 @@ contract Event is Ownable, ReentrancyGuard {
     }
 
     modifier timedTransitions() {
-        if (phase == EventPhase.SALE && block.timestamp == eventDate)
+        if (phase == EventPhase.PRESALE && block.timestamp >= saleDate)
             nextStage();
-        if (phase == EventPhase.VOTE && block.timestamp == votingPeriodEnd)
+        if (phase == EventPhase.SALE && block.timestamp >= eventDate)
+            nextStage();
+        if (phase == EventPhase.EVENT && block.timestamp >= votingPeriodStart)
+            nextStage();
+        if (phase == EventPhase.VOTE && block.timestamp >= votingPeriodEnd)
             nextStage();
         _;
     }
 
-    modifier isMarketPlace() {
-        require(msg.sender == marketPlace, "Only the marketplace can call this function");
+    modifier isApprovedPlatform() {
+        require(msg.sender == organiser || msg.sender == marketPlace, "Only approved platforms can call this function");
         _;
     }
 
@@ -79,7 +88,7 @@ contract Event is Ownable, ReentrancyGuard {
     }
 
     function getTicketPrice(uint256 _ticketId) public view returns (uint256) {
-        return ticketContract.getTicketPrice(_ticketId);
+        return ticketContract.getTicketPrice(_ticketId) * 10 ** 18;
     }
 
     function getTicketQuantity(uint256 _ticketId) public view returns (uint256) {
@@ -102,12 +111,13 @@ contract Event is Ownable, ReentrancyGuard {
         address buyer, 
         uint256 ticketId, 
         uint256 numberOfTickets
-    ) external payable isMarketPlace atPhase(EventPhase.SALE) timedTransitions nonReentrant {
+    ) external payable timedTransitions isApprovedPlatform atPhase(EventPhase.SALE) nonReentrant {
+
         uint256 totalPrice = getTicketPrice(ticketId) * numberOfTickets;
         require(msg.value >= totalPrice, "Not enough ETH sent!");
 
         totalTicketsSold += numberOfTickets;
-        ticketContract.safeTransferFrom(address(this), buyer, ticketId, numberOfTickets, "");
+        ticketContract.safeTransferFrom(organiser, buyer, ticketId, numberOfTickets, "");
         emit OfficialTicketPurchased(buyer, numberOfTickets, ticketId);
 
         if (msg.value > totalPrice) {
@@ -121,7 +131,7 @@ contract Event is Ownable, ReentrancyGuard {
     ///         Votes are weighted by how many tickets the address holds. if no refund required, no vote should be sent
     function vote(
         address ticketHolder 
-    ) external isMarketPlace atPhase(EventPhase.VOTE) timedTransitions nonReentrant{
+    ) external timedTransitions isApprovedPlatform atPhase(EventPhase.VOTE) nonReentrant{
         // require that the voter has not voted yet
         require(!hasVoted[ticketHolder], "You have already voted");
 
@@ -135,7 +145,7 @@ contract Event is Ownable, ReentrancyGuard {
     }
 
     /// @notice Implements withdraw functionality for the organiser to withdraw funds if the refund threshold is not met
-    function handleWithdraw() external isMarketPlace atPhase(EventPhase.END) timedTransitions() onlyOwner nonReentrant {
+    function handleWithdraw() external timedTransitions isApprovedPlatform atPhase(EventPhase.END) onlyOwner nonReentrant {
         require (!shouldRefund(), "No scam! Refund threshold is met!");
         // transfer funds to organiser
         (bool success, ) = payable(organiser).call{value: address(this).balance}("");
@@ -148,7 +158,7 @@ contract Event is Ownable, ReentrancyGuard {
     ///         to save on gas fees, as the contract will not need to keep track of all ticketholders
     function handleRefund(
         address ticketHolder
-    ) external isMarketPlace atPhase(EventPhase.END) timedTransitions nonReentrant {
+    ) external timedTransitions isApprovedPlatform atPhase(EventPhase.END) nonReentrant {
         require (shouldRefund(), "Refund threshold not met");
 
         uint256 numberOfTicketsHeld = ticketContract.balanceOf(ticketHolder, 0);
@@ -169,15 +179,18 @@ contract Event is Ownable, ReentrancyGuard {
     // transfer to specific address (can be sending ticket to friends, selling to someone in particular)
 
     /// @notice Transfers ticket from reseller to buyer while updating the balances of both parties to ensure
-    ///         refunds processed correctly
+    ///         refunds processed correctly. can be called during SALE or EVENT phase for last min buyers
     ///         also checks price cap (to prevent scalping) and returns excess eth to the buyer
+    ///         need to think about how to allow the event contract to transfer tickets on behalf of the seller
     function processResale(
         address seller,
         address buyer, 
         uint256 ticketId, 
         uint256 numberOfTickets,
         uint256 pricePerTicket
-    ) external payable isMarketPlace atPhase(EventPhase.SALE) timedTransitions nonReentrant {
+    ) external payable timedTransitions isApprovedPlatform nonReentrant {
+        pricePerTicket *= 10 ** 18; // convert to wei
+        require(phase == EventPhase.SALE || phase == EventPhase.EVENT, "Not able to purchase resale tickets anymore");
         require(pricePerTicket <= getTicketPrice(ticketId), "Price cap exceeded"); // price cap is just original ticket price for now
         require(ticketContract.balanceOf(seller, ticketId) >= numberOfTickets, "Not enough tickets to sell");
 
