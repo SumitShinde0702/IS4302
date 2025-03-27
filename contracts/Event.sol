@@ -10,6 +10,7 @@ interface ITicketContract {
     function safeTransferFrom(address from, address to, uint256 id, uint256 amount, bytes calldata data) external;
     function balanceOf(address account, uint256 id) external view returns (uint256);
     function getTicketPrice(uint256 ticketId) external view returns (uint256);
+    function isApprovedForAll(address seller, address operator) external view returns (bool);
 }
 
 /// @title Event
@@ -22,7 +23,7 @@ interface ITicketContract {
 contract Event is Ownable, ReentrancyGuard {
     string public eventName;
 
-    enum EventPhase { PRESALE, SALE, EVENT, VOTE, END }
+    enum EventPhase { PRESALE, SALE, VOTE, END }
     EventPhase public phase;
 
     ITicketContract public ticketContract;
@@ -40,7 +41,7 @@ contract Event is Ownable, ReentrancyGuard {
 
     event OfficialTicketPurchased(address indexed buyer, uint256 numberOfTickets, uint256 ticketTypeId);
     event ResaleTicketPurchased(address indexed seller, address indexed buyer, uint256 numberOfTickets, uint256 ticketTypeId, uint256 pricePerTicket);
-    event Voted(address indexed voter);
+    event Voted(address indexed voter, uint256 numberOfVotes);
     event FundsWithdrawn();
     event RefundsIssued(address indexed ticketHolder, uint256 numberOfTickets, uint256 amount);
 
@@ -71,8 +72,6 @@ contract Event is Ownable, ReentrancyGuard {
             nextStage();
         if (phase == EventPhase.SALE && block.timestamp >= eventDate)
             nextStage();
-        if (phase == EventPhase.EVENT && block.timestamp >= votingPeriodStart)
-            nextStage();
         if (phase == EventPhase.VOTE && block.timestamp >= votingPeriodEnd)
             nextStage();
         _;
@@ -100,7 +99,7 @@ contract Event is Ownable, ReentrancyGuard {
     }
 
     /// @notice Check to see if refund threshold met at the end of the event
-    function shouldRefund() public view atPhase(EventPhase.END) returns (bool) {
+    function shouldRefund() internal view atPhase(EventPhase.END) returns (bool) {
         return refundVotes * 100 / totalTicketsSold >= refundThreshold;
     }
 
@@ -141,11 +140,11 @@ contract Event is Ownable, ReentrancyGuard {
         
         refundVotes += numberOfTicketsHeld;
         hasVoted[ticketHolder] = true;
-        emit Voted(ticketHolder);
+        emit Voted(ticketHolder, numberOfTicketsHeld);
     }
 
     /// @notice Implements withdraw functionality for the organiser to withdraw funds if the refund threshold is not met
-    function handleWithdraw() external timedTransitions isApprovedPlatform atPhase(EventPhase.END) onlyOwner nonReentrant {
+    function handleWithdraw() external timedTransitions atPhase(EventPhase.END) onlyOwner nonReentrant {
         require (!shouldRefund(), "No scam! Refund threshold is met!");
         // transfer funds to organiser
         (bool success, ) = payable(organiser).call{value: address(this).balance}("");
@@ -172,11 +171,11 @@ contract Event is Ownable, ReentrancyGuard {
         emit RefundsIssued(ticketHolder, numberOfTicketsHeld, ticketValue);
     }
 
-    // Future functions to create:
-    // 1. organisers to withdraw the remaining balance within the contract after refund period has ended, to prevent any funds from being locked
-    // 2. function to process reselling of tickets, things to consider:
-    // resale to general population
-    // transfer to specific address (can be sending ticket to friends, selling to someone in particular)
+    /// @notice This function is to set this contract's address as approved to transfer seller's
+    ///         tickets when reselling.
+    function checkApproval(address seller) isApprovedPlatform external view returns(bool) {
+        return ticketContract.isApprovedForAll(seller, address(this));
+    }
 
     /// @notice Transfers ticket from reseller to buyer while updating the balances of both parties to ensure
     ///         refunds processed correctly. can be called during SALE or EVENT phase for last min buyers
@@ -188,9 +187,8 @@ contract Event is Ownable, ReentrancyGuard {
         uint256 ticketId, 
         uint256 numberOfTickets,
         uint256 pricePerTicket
-    ) external payable timedTransitions isApprovedPlatform nonReentrant {
+    ) external payable atPhase(EventPhase.SALE) timedTransitions isApprovedPlatform nonReentrant {
         pricePerTicket *= 10 ** 18; // convert to wei
-        require(phase == EventPhase.SALE || phase == EventPhase.EVENT, "Not able to purchase resale tickets anymore");
         require(pricePerTicket <= getTicketPrice(ticketId), "Price cap exceeded"); // price cap is just original ticket price for now
         require(ticketContract.balanceOf(seller, ticketId) >= numberOfTickets, "Not enough tickets to sell");
 
@@ -208,4 +206,7 @@ contract Event is Ownable, ReentrancyGuard {
             require(returnExcess, "Excess funds return failed");
         }
     }
+
+    // Future functions to create:
+    // 1. organisers to withdraw the remaining balance within the contract after refund period has ended, to prevent any funds from being locked
 }

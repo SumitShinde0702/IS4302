@@ -15,6 +15,7 @@ interface ITEventContract {
     function getTicketQuantity(uint256 ticketId) external view returns (uint256);
     function getAccountBalance(address _address, uint256 ticketId) external view returns (uint256);
     function eventName() external view returns (string memory);
+    function checkApproval(address seller) external view returns (bool);
 }
 
 /// @title Marketplace
@@ -53,7 +54,7 @@ contract Marketplace is Ownable, ReentrancyGuard {
     }
 
     /// @notice Lists tickets for official sale, will be called by event organiser.
-    function createOfficialListing(address eventContract, uint256 ticketId) external nonReentrant {
+    function createOfficialListing(address eventContract, uint256 ticketId) external {
         require(allowedOrganisers[msg.sender], "Organiser is not approved");
 
         ITEventContract eventContractInstance = ITEventContract(eventContract);
@@ -74,7 +75,7 @@ contract Marketplace is Ownable, ReentrancyGuard {
         require(quantity > 0 && quantity <= listing.quantity, "Invalid quantity requested");
 
         ITEventContract eventContractInstance = ITEventContract(eventContract);
-        eventContractInstance.processOfficialSale(msg.sender, listing.ticketId, quantity);
+        eventContractInstance.processOfficialSale{value: msg.value}(msg.sender, listing.ticketId, quantity);
 
         listing.quantity -= quantity;
         if (listing.quantity == 0) {
@@ -91,7 +92,8 @@ contract Marketplace is Ownable, ReentrancyGuard {
         ITEventContract eventContractInstance = ITEventContract(eventContract);
         // ensure seller actually owns enough of the particular ticket, prevents counterfeits from being listed
         require(eventContractInstance.getAccountBalance(msg.sender, ticketId) >= quantity, "Insufficient tickets owned!");
-        
+        // ensure that user has already approved the event contract to transfer tickets on their behalf
+        require(eventContractInstance.checkApproval(msg.sender), "Please approve the Event contract to transfer your tokens first!");
         resaleListings[++resaleListingCount] = Listing({
             seller: msg.sender,
             ticketId: ticketId,
@@ -107,7 +109,7 @@ contract Marketplace is Ownable, ReentrancyGuard {
         Listing storage listing = resaleListings[listingId];
         require(quantity > 0 && quantity <= listing.quantity, "Invalid quantity requested");
 
-        eventContractInstance.processResale(listing.seller, msg.sender, listing.ticketId, quantity, listing.pricePerTicket);
+        eventContractInstance.processResale{value: msg.value}(listing.seller, msg.sender, listing.ticketId, quantity, listing.pricePerTicket);
 
         listing.quantity -= quantity;
         if (listing.quantity == 0) {
@@ -124,4 +126,9 @@ contract Marketplace is Ownable, ReentrancyGuard {
         eventContractInstance.vote(msg.sender);
     }
 
+    /// @notice Allows ticket holders to claim their refund after the refund vote has passed
+    function claimRefund(address eventContract) external {
+        ITEventContract eventContractInstance = ITEventContract(eventContract);
+        eventContractInstance.handleRefund(msg.sender);
+    }
 }
