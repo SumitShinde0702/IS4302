@@ -125,39 +125,74 @@ describe("Test Event & Ticket", function () {
     ).to.equal(9998);
   });
 
-  it("Test resale functions", async function () { // testcase: user1 sells 1 ticket to user 2
+  it("Test resale functions", async function () {
+    // testcase: user1 sells 1 ticket to user 2
     // need to manually allow the event contract to spend user1's tickets first
     TicketContract.connect(user1).setApprovalForAll(EventContractAddress, true);
     await expect(
-      EventContract.processResale(user1.address, user2.address, NORMAL_TICKET, 1, 11, {
-        value: ethers.parseEther("11"),
-      }),
+      EventContract.processResale(
+        user1.address,
+        user2.address,
+        NORMAL_TICKET,
+        1,
+        11,
+        {
+          value: ethers.parseEther("11"),
+        }
+      ),
       "Should not allow resale at higher price"
     ).to.be.revertedWith("Price cap exceeded");
 
     await expect(
-      EventContract.processResale(user1.address, user2.address, NORMAL_TICKET, 2, 9, {
-        value: ethers.parseEther("9"),
-      }),
+      EventContract.processResale(
+        user1.address,
+        user2.address,
+        NORMAL_TICKET,
+        2,
+        9,
+        {
+          value: ethers.parseEther("9"),
+        }
+      ),
       "Should not allow resale of more tickets than owned"
     ).to.be.revertedWith("Not enough tickets to sell");
 
     await expect(
-      EventContract.processResale(user1.address, user2.address, NORMAL_TICKET, 1, 9, {
-        value: ethers.parseEther("8"),
-      }),
+      EventContract.processResale(
+        user1.address,
+        user2.address,
+        NORMAL_TICKET,
+        1,
+        9,
+        {
+          value: ethers.parseEther("8"),
+        }
+      ),
       "Should reject if not enough eth sent"
     ).to.be.revertedWith("Not enough ETH sent!");
 
     await expect(
-      EventContract.processResale(user1.address, user2.address, NORMAL_TICKET, 1, 9, {
-        value: ethers.parseEther("10"),
-      }),
+      EventContract.processResale(
+        user1.address,
+        user2.address,
+        NORMAL_TICKET,
+        1,
+        9,
+        {
+          value: ethers.parseEther("10"),
+        }
+      ),
       "Should purchase tickets successfully"
     )
       .to.emit(EventContract, "ResaleTicketPurchased")
-      .withArgs(user1.address, user2.address, 1, NORMAL_TICKET, ethers.parseEther("9"));
-    
+      .withArgs(
+        user1.address,
+        user2.address,
+        1,
+        NORMAL_TICKET,
+        ethers.parseEther("9")
+      );
+
     expect(
       await TicketContract.balanceOf(user1.address, NORMAL_TICKET),
       "User1 should have 0 ticket"
@@ -170,46 +205,47 @@ describe("Test Event & Ticket", function () {
   });
 
   it("Test voting functions", async function () {
-    await expect(
-      EventContract.vote(user2.address)
-    ).to.be.revertedWith("requested service is not available now");
+    await expect(EventContract.vote(user2.address)).to.be.revertedWith(
+      "requested service is not available now"
+    );
 
     const voteStart = await EventContract.votingPeriodStart();
     await time.increaseTo(voteStart);
-    
-    await expect(
-      EventContract.vote(user1.address)
-    ).to.be.revertedWith("You must have tickets to vote");
 
-    await expect(
-      EventContract.vote(user2.address)
-    ).to.emit(EventContract, "Voted")
+    await expect(EventContract.vote(user1.address)).to.be.revertedWith(
+      "You must have tickets to vote"
+    );
+
+    await expect(EventContract.vote(user2.address))
+      .to.emit(EventContract, "Voted")
       .withArgs(user2.address, 2);
-    
-    expect(
-      await EventContract.refundVotes()
-    ).to.equal(2);
 
-    await expect(
-      EventContract.vote(user2.address)
-    ).to.be.revertedWith("You have already voted");
+    expect(await EventContract.refundVotes()).to.equal(2);
+
+    await expect(EventContract.vote(user2.address)).to.be.revertedWith(
+      "You have already voted"
+    );
   });
 
-  it("Should handle refund correctly", async function() {
+  it("Should handle refund correctly", async function () {
     const voteEnd = await EventContract.votingPeriodEnd();
     await time.increaseTo(voteEnd);
 
-    await expect(
-      EventContract.handleWithdraw()
-    ).to.be.revertedWith("No scam! Refund threshold is met!");
+    await expect(EventContract.handleWithdraw()).to.be.revertedWith(
+      "No scam! Refund threshold is met!"
+    );
 
-    await expect(
-      EventContract.handleRefund(user1.address)
-    ).to.be.revertedWith("Address does not hold any tickets");
+    await expect(EventContract.handleRefund(user1.address)).to.be.revertedWith(
+      "Address does not hold any tickets"
+    );
 
-    await expect(
-      EventContract.handleRefund(user2.address)
-    ).to.emit(EventContract, "RefundsIssued")
+    await expect(EventContract.handleRefund(user2.address))
+      .to.emit(EventContract, "RefundsIssued")
       .withArgs(user2.address, 2, ethers.parseEther("20"));
+
+    // check if burn successfully after refund given
+    expect(
+      await TicketContract.balanceOf(user2.address, NORMAL_TICKET)
+    ).to.equal(0);
   });
 });

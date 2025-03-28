@@ -219,8 +219,9 @@ describe("Test MarketPlace functions", function () {
       MarketContract.connect(user1).claimRefund(EventContractAddress)
     ).to.be.revertedWith("Refund threshold not met");
 
-    expect(
-      EventContract.handleWithdraw()
-    ).to.emit(EventContract, "FundsWithdrawn");
+    expect(EventContract.handleWithdraw()).to.emit(
+      EventContract,
+      "FundsWithdrawn"
+    );
   });
 });

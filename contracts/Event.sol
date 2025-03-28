@@ -11,6 +11,7 @@ interface ITicketContract {
     function balanceOf(address account, uint256 id) external view returns (uint256);
     function getTicketPrice(uint256 ticketId) external view returns (uint256);
     function isApprovedForAll(address seller, address operator) external view returns (bool);
+    function burn(address account, uint256 ticketId, uint256 amount) external;
 }
 
 /// @title Event
@@ -169,6 +170,8 @@ contract Event is Ownable, ReentrancyGuard {
         require(success, "Refund failed!");
 
         emit RefundsIssued(ticketHolder, numberOfTicketsHeld, ticketValue);
+
+        ticketContract.burn(ticketHolder, 0, numberOfTicketsHeld);
     }
 
     /// @notice This function is to set this contract's address as approved to transfer seller's

@@ -51,6 +51,15 @@ contract Ticket is ERC1155, Ownable {
         super.safeTransferFrom(from, to, id, amount, _data);
     }
 
+    /// @notice Calls the _burn function to burn and invalidate tickets
+    function burn(
+        address account,
+        uint256 id,
+        uint256 amount
+    ) external {
+        _burn(account, id, amount);
+    }
+
     /// @notice Overrides safeBatchTransferFrom to restrict batch transfers.
     ///         not used for now ~
     // function safeBatchTransferFrom(
