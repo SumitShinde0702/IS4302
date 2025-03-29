@@ -16,6 +16,7 @@ interface ITEventContract {
     function getAccountBalance(address _address, uint256 ticketId) external view returns (uint256);
     function eventName() external view returns (string memory);
     function checkApproval(address seller) external view returns (bool);
+    function processTicketUsage(address ticketHolder, uint256 ticketId, uint256 numberOfTickets) external;
 }
 
 /// @title Marketplace
@@ -122,13 +123,16 @@ contract Marketplace is Ownable, ReentrancyGuard {
     ///         refund not required. Checks are done on the Event contract side, but should only be shown to ticketholders
     ///         at the appropriate phase of the event (VOTE phase)
     function voteForRefund(address eventContract) external {
-        ITEventContract eventContractInstance = ITEventContract(eventContract);
-        eventContractInstance.vote(msg.sender);
+        ITEventContract(eventContract).vote(msg.sender);
     }
 
     /// @notice Allows ticket holders to claim their refund after the refund vote has passed
     function claimRefund(address eventContract) external {
-        ITEventContract eventContractInstance = ITEventContract(eventContract);
-        eventContractInstance.handleRefund(msg.sender);
+        ITEventContract(eventContract).handleRefund(msg.sender);
+    }
+
+    /// @notice Usage of tickets for ticketholders
+    function useTicket(address eventContract, uint256 ticketId, uint256 quantity) external {
+        ITEventContract(eventContract).processTicketUsage(msg.sender, ticketId, quantity);
     }
 }

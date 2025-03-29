@@ -24,7 +24,7 @@ interface ITicketContract {
 contract Event is Ownable, ReentrancyGuard {
     string public eventName;
 
-    enum EventPhase { PRESALE, SALE, VOTE, END }
+    enum EventPhase { PRESALE, SALE, EVENT, VOTE, END }
     EventPhase public phase;
 
     ITicketContract public ticketContract;
@@ -39,9 +39,11 @@ contract Event is Ownable, ReentrancyGuard {
 
     uint256 public refundVotes;
     mapping(address => bool) public hasVoted;
+    mapping(address => uint256) public numberOfTicketsUsed;
 
-    event OfficialTicketPurchased(address indexed buyer, uint256 numberOfTickets, uint256 ticketTypeId);
-    event ResaleTicketPurchased(address indexed seller, address indexed buyer, uint256 numberOfTickets, uint256 ticketTypeId, uint256 pricePerTicket);
+    event OfficialTicketPurchased(address indexed buyer, uint256 numberOfTickets, uint256 ticketId);
+    event ResaleTicketPurchased(address indexed seller, address indexed buyer, uint256 numberOfTickets, uint256 ticketId, uint256 pricePerTicket);
+    event TicketUsed(address indexed ticketHolder, uint256 numberOfTickets, uint256 ticketId);
     event Voted(address indexed voter, uint256 numberOfVotes);
     event FundsWithdrawn();
     event RefundsIssued(address indexed ticketHolder, uint256 numberOfTickets, uint256 amount);
@@ -72,6 +74,8 @@ contract Event is Ownable, ReentrancyGuard {
         if (phase == EventPhase.PRESALE && block.timestamp >= saleDate)
             nextStage();
         if (phase == EventPhase.SALE && block.timestamp >= eventDate)
+            nextStage();
+        if (phase == EventPhase.EVENT && block.timestamp >= votingPeriodStart)
             nextStage();
         if (phase == EventPhase.VOTE && block.timestamp >= votingPeriodEnd)
             nextStage();
@@ -190,7 +194,7 @@ contract Event is Ownable, ReentrancyGuard {
         uint256 ticketId, 
         uint256 numberOfTickets,
         uint256 pricePerTicket
-    ) external payable atPhase(EventPhase.SALE) timedTransitions isApprovedPlatform nonReentrant {
+    ) external payable timedTransitions atPhase(EventPhase.SALE) isApprovedPlatform nonReentrant {
         pricePerTicket *= 10 ** 18; // convert to wei
         require(pricePerTicket <= getTicketPrice(ticketId), "Price cap exceeded"); // price cap is just original ticket price for now
         require(ticketContract.balanceOf(seller, ticketId) >= numberOfTickets, "Not enough tickets to sell");
@@ -210,6 +214,17 @@ contract Event is Ownable, ReentrancyGuard {
         }
     }
 
-    // Future functions to create:
+    /// @notice processes the ticket usage, based on the ticket type and quantity. burns the tickets for normal fungible tickets (havent thought about functionalities for nft yet)
+    function processTicketUsage(
+        address ticketHolder,
+        uint256 ticketId,
+        uint256 numberOfTickets
+    ) external timedTransitions atPhase(EventPhase.EVENT) isApprovedPlatform nonReentrant {
+        require (ticketContract.balanceOf(ticketHolder, ticketId) >= numberOfTickets + numberOfTicketsUsed[ticketHolder], "Not enough tickets to use");
+        numberOfTicketsUsed[ticketHolder] += numberOfTickets;
+        emit TicketUsed(ticketHolder, numberOfTickets, ticketId);
+    }
+
+    // Future functions to consider creating:
     // 1. organisers to withdraw the remaining balance within the contract after refund period has ended, to prevent any funds from being locked
 }

@@ -204,6 +204,46 @@ describe("Test Event & Ticket", function () {
     ).to.equal(2);
   });
 
+  it("Test usage of tickets", async function () {
+    const eventStart = await EventContract.eventDate();
+    await time.increaseTo(eventStart);
+
+    await expect(
+      EventContract.processTicketUsage(user2.address, NORMAL_TICKET, 1)
+    )
+      .to.emit(EventContract, "TicketUsed")
+      .withArgs(user2.address, 1, NORMAL_TICKET);
+
+    const ticketsHeld = await TicketContract.balanceOf(
+      user2.address,
+      NORMAL_TICKET
+    );
+    let ticketsUsed = await EventContract.numberOfTicketsUsed(user2.address);
+
+    expect(
+      ticketsHeld - ticketsUsed,
+      "User2 should have 1 ticket left"
+    ).to.equal(1);
+
+    await expect(
+      EventContract.processTicketUsage(user2.address, NORMAL_TICKET, 1)
+    )
+      .to.emit(EventContract, "TicketUsed")
+      .withArgs(user2.address, 1, NORMAL_TICKET);
+
+    ticketsUsed = await EventContract.numberOfTicketsUsed(user2.address);
+
+    expect(
+      ticketsHeld - ticketsUsed,
+      "User2 should have 0 tickets left"
+    ).to.equal(0);
+
+    await expect(
+      EventContract.processTicketUsage(user2.address, NORMAL_TICKET, 1),
+      "Should not have enough tickets to use anymore"
+    ).to.be.revertedWith("Not enough tickets to use");
+  });
+
   it("Test voting functions", async function () {
     await expect(EventContract.vote(user2.address)).to.be.revertedWith(
       "requested service is not available now"

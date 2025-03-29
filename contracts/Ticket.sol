@@ -57,6 +57,7 @@ contract Ticket is ERC1155, Ownable {
         uint256 id,
         uint256 amount
     ) external {
+        require(msg.sender == eventContract || msg.sender == owner(), "Only event contract or owner can transfer tickets");
         _burn(account, id, amount);
     }
 

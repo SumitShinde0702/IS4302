@@ -198,6 +198,17 @@ describe("Test MarketPlace functions", function () {
     ).to.equal(3);
   });
 
+  it("Should be able to use tickets owned", async function () {
+    const eventStart = await EventContract.eventDate();
+    await time.increaseTo(eventStart);
+
+    await expect(
+      MarketContract.connect(user4).useTicket(EventContractAddress, NORMAL_TICKET, 2)
+    )
+      .to.emit(EventContract, "TicketUsed")
+      .withArgs(user4.address, 2, NORMAL_TICKET);
+  });
+
   it("Should be able to vote for refund", async function () {
     const voteStart = await EventContract.votingPeriodStart();
     await time.increaseTo(voteStart);
