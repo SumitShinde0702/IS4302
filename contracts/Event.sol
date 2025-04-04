@@ -120,9 +120,9 @@ contract Event is Ownable, ReentrancyGuard {
         uint256 totalPrice = getTicketPrice(ticketId) * numberOfTickets;
         require(msg.value >= totalPrice, "Not enough ETH sent!");
 
-        totalTicketsSold += numberOfTickets;
         ticketContract.safeTransferFrom(organiser, buyer, ticketId, numberOfTickets, "");
         emit OfficialTicketPurchased(buyer, numberOfTickets, ticketId);
+        totalTicketsSold += numberOfTickets;
 
         if (msg.value > totalPrice) {
             (bool success,) = payable(buyer).call{value: msg.value - totalPrice}("");

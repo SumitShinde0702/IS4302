@@ -30,6 +30,7 @@ contract Marketplace is Ownable, ReentrancyGuard {
 
     struct Listing {
         address seller;
+        string eventName;
         uint256 ticketId;
         uint256 quantity;
         uint256 pricePerTicket;
@@ -60,14 +61,16 @@ contract Marketplace is Ownable, ReentrancyGuard {
 
         ITEventContract eventContractInstance = ITEventContract(eventContract);
         uint256 initialQuantity = eventContractInstance.getTicketQuantity(ticketId);
+        string memory eventName = eventContractInstance.eventName();
         officialListings[++officialListingCount] = Listing({
             seller: msg.sender,
+            eventName: eventName,
             ticketId: ticketId,
             quantity: initialQuantity,
             pricePerTicket: eventContractInstance.getTicketPrice(ticketId)
         });
 
-        emit OfficialTicketListed(msg.sender, eventContractInstance.eventName(), officialListingCount, initialQuantity);
+        emit OfficialTicketListed(msg.sender, eventName, officialListingCount, initialQuantity);
     }
 
     /// @notice Purchases tickets from an active listing.
@@ -95,13 +98,15 @@ contract Marketplace is Ownable, ReentrancyGuard {
         require(eventContractInstance.getAccountBalance(msg.sender, ticketId) >= quantity, "Insufficient tickets owned!");
         // ensure that user has already approved the event contract to transfer tickets on their behalf
         require(eventContractInstance.checkApproval(msg.sender), "Please approve the Event contract to transfer your tokens first!");
+        string memory eventName = eventContractInstance.eventName();
         resaleListings[++resaleListingCount] = Listing({
             seller: msg.sender,
+            eventName: eventName,
             ticketId: ticketId,
             quantity: quantity,
             pricePerTicket: ticketPrice
         });
-        emit ResaleTicketListed(msg.sender, eventContractInstance.eventName(), resaleListingCount, quantity);
+        emit ResaleTicketListed(msg.sender, eventName, resaleListingCount, quantity);
     }
 
     /// @notice Purchases tickets from a resale listing.
