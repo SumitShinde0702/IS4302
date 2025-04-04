@@ -1,69 +1,42 @@
-# Sample Hardhat Project
+"# IS4302"
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a Hardhat Ignition module that deploys that contract.
+The traditional ticketing system is fraught with systemic issues that degrade the fan experience and distort the economics of live events.
+Our blockchain ticketing system aims to take advantage of the security and immutability of the blockchain and existing services that exist on top of it. The following is a sample flow of events:
 
-Try running some of the following tasks:
+1. Marketplace contract deployed by us
+2. Organiser applies for whitelisting to us to whitelist their address to create listings
+3. Organiser would deploy the Ticket & Event contract and link the Event contract's address to the Ticket's contract
+4. Organisers would be able to create listings after whitelisting
+5. Buyers and resellers would interact with tickets through our marketplace contract
 
-```shell
-npx hardhat help
-npx hardhat test
-REPORT_GAS=true npx hardhat test
-npx hardhat node
-npx hardhat ignition deploy ./ignition/modules/Lock.js
-```
-"# IS4302" 
-
-
-1. Ticket.sol
+6. Ticket.sol
 
 Implements the ERC1155 token that represents event tickets.
 
-Uses OpenZeppelin's ERC1155 standard for NFT tickets. Only the owner (admin) can mint new tickets.
-Transfers (both single and batch) are restricted so that only a designated marketplace contract can execute them. This ensures that ticket resales can only occur through an approved platform.
+Uses OpenZeppelin's ERC1155 standard for FT & NFT tickets. Tickets are first minted by batch from the constructor and first linked to the organiser's address.
+Transfers are restricted so that only our designated marketplace contract can execute them. This ensures that ticket resales can only occur through our approved platform.
 
-Deployed first and later linked to the marketplace and ticket sale contracts via the setMarketplace function.
+Deployed first and later linked to the event contract through the setEventContract function.
 
-2. TicketMint.sol
+2. Event.sol
 
-Manages the primary ticket sale process, voting for event start confirmation, and fund management.
+The Event smart contract is designed to manage ticket sales, usage, funds, and refunds for a specific event. It ensures that ticket purchases, resales, and refund mechanisms operate securely and transparently. The contract follows a time-based phased system and incorporates a voting mechanism to determine if refunds should be issued in case of event cancellation or major alterations. This contract interacts with the Ticket contract through an interface, for the functions or details that are required within Ticket.sol.
 
-Primary Sale:
-Allows users to purchase tickets (minting) only when the minting period has started. It enforces maximum tickets per buyer and ensures that funds are locked in the contract.
-Voting Mechanism:
-Ticket holders can vote that the event has started. Each ticket held at the moment of voting counts as one vote.
-Event Finalization:
-Once the event start time is reached, the event is finalized 3 days from that time. If the total vote weight meets or exceeds 40%, the event is confirmed.
-
-Funds Withdrawal & Refunds:
-Event Organizer Withdrawal:
-If the event is confirmed, the designated event organizer (set during event creation) can withdraw the locked funds to their wallet.
-Admin Refund:
-If the event is not confirmed and three days have passed since the event start time, the platform admin can trigger refunds to all ticket holders.
-Mint Start Time:
-Ticket purchases are only allowed after a specified mint start time.
-
-Created with parameters such as ticket price, maximum tickets per buyer, event start time, vote threshold, mint start time, and the organizer’s wallet address. It distinguishes between the roles of the platform admin (owner) and the event organizer.
+Event terms will be passed in through the constructor, which will also link to the address of the Ticket contract
 
 3. Marketplace.sol
 
-Facilitates the secondary market for ticket resales.
+The Marketplace smart contract enables the listing, purchasing, and resale of event tickets in a secure and decentralized manner. This contract allows event organizers to list their tickets for official sale and supports peer-to-peer resale transactions with built-in legitimacy checks. The contract also incorporates refund voting and claim mechanisms for ticket holders. This contract interacts with the Event contract through an interface.
 
-Listing Tickets:
-Ticket holders can list their tickets for resale. Listings require that the seller has sufficient ticket balance.
-Price Control:
-The admin sets a maximum allowed resale price for each ticket type to help prevent scalping and price gouging.
-Ticket Transfer:
-Tickets are held in escrow in the marketplace contract during the listing period. When purchased, the ticket is transferred from escrow to the buyer, and funds are forwarded to the seller.
-Cancel Listings:
-Sellers can cancel their listings to retrieve their tickets.
+Testing Scripts:
 
-Interacts with the Ticket contract via restricted transfer functions, ensuring that all transfers are processed through the approved marketplace.
+1. Test_Event.js
 
+Implements unit testing on all event functions and the corresponding Ticket functions
+
+2. Test_Marketplace.js
+
+Implements integration testing to ensure that the marketplace interacts accurately with Event contract
 
 Things to add:
-Maybe add royalties? % of each mint/transaction on marketplace
-ticket cap tagged to ticket instead
-create extra contract that locks funds + voting
-implement whitelist of organisers (business logic: organisers who want to list have to send in their address and other details for approval, admin will add the address to the whitelist (probz just another mapping)
-think about minting & sending as compared to batch mint from organiser & transfer from organiser's address to buyers
-timelock function vs voting start & end
+add commission fee to marketplace
