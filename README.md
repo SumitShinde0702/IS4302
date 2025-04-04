@@ -1,42 +1,101 @@
-"# IS4302"
+🎟️ Blockchain Ticketing System — IS4302 Project
+Overview
+The traditional ticketing system is fraught with systemic issues — scalping, fraud, and lack of transparency — that degrade the fan experience and distort the economics of live events.
 
-The traditional ticketing system is fraught with systemic issues that degrade the fan experience and distort the economics of live events.
-Our blockchain ticketing system aims to take advantage of the security and immutability of the blockchain and existing services that exist on top of it. The following is a sample flow of events:
+Our blockchain ticketing platform leverages the security, transparency, and immutability of smart contracts to resolve these issues and offer a fairer, more reliable ticketing solution.
 
-1. Marketplace contract deployed by us
-2. Organiser applies for whitelisting to us to whitelist their address to create listings
-3. Organiser would deploy the Ticket & Event contract and link the Event contract's address to the Ticket's contract
-4. Organisers would be able to create listings after whitelisting
-5. Buyers and resellers would interact with tickets through our marketplace contract
+✅ Key Features
+ERC-1155-based ticketing (supports fungible and non-fungible tickets)
 
-6. Ticket.sol
+Controlled resale through a secure marketplace
 
-Implements the ERC1155 token that represents event tickets.
+Organiser whitelisting for listing authority
 
-Uses OpenZeppelin's ERC1155 standard for FT & NFT tickets. Tickets are first minted by batch from the constructor and first linked to the organiser's address.
-Transfers are restricted so that only our designated marketplace contract can execute them. This ensures that ticket resales can only occur through our approved platform.
+Time-based sales and refund mechanisms
 
-Deployed first and later linked to the event contract through the setEventContract function.
+Decentralized refund voting in case of event disruption
+
+QR-code-based validation (off-chain)
+
+Modular contract architecture
+
+🔁 System Flow
+Marketplace Contract is deployed and acts as the main point of interaction for users.
+
+Event Organiser applies for whitelisting to be allowed to list events and tickets.
+
+Organiser deploys the Ticket & Event Contracts, and links the Ticket contract to the Event contract.
+
+Once whitelisted, the organiser creates listings for ticket sales.
+
+Buyers and Resellers interact through the Marketplace, enabling secure official and secondary sales.
+
+📦 Smart Contracts
+1. Ticket.sol
+ERC-1155 Token Contract (for tickets)
+
+Implements OpenZeppelin’s ERC1155 standard for minting tickets.
+
+Tickets are minted in batches to the organiser during deployment.
+
+Transfers restricted — only the designated Marketplace contract can transfer tickets.
+
+Linked to the Event contract after deployment via setEventContract().
 
 2. Event.sol
+Event Management Contract
 
-The Event smart contract is designed to manage ticket sales, usage, funds, and refunds for a specific event. It ensures that ticket purchases, resales, and refund mechanisms operate securely and transparently. The contract follows a time-based phased system and incorporates a voting mechanism to determine if refunds should be issued in case of event cancellation or major alterations. This contract interacts with the Ticket contract through an interface, for the functions or details that are required within Ticket.sol.
+Manages ticket sales, usage, refunds, and voting.
 
-Event terms will be passed in through the constructor, which will also link to the address of the Ticket contract
+Enforces time-based phases (e.g., presale, sale, event, refund).
+
+Refund voting mechanism for eligible ticket holders.
+
+Interacts with the Ticket contract through an interface.
+
+Deployed with ticket and event terms in the constructor.
 
 3. Marketplace.sol
+Official and Resale Marketplace Contract
 
-The Marketplace smart contract enables the listing, purchasing, and resale of event tickets in a secure and decentralized manner. This contract allows event organizers to list their tickets for official sale and supports peer-to-peer resale transactions with built-in legitimacy checks. The contract also incorporates refund voting and claim mechanisms for ticket holders. This contract interacts with the Event contract through an interface.
+Enables ticket listings, purchases, and resales.
 
-Testing Scripts:
+Only whitelisted organisers can list tickets officially.
 
-1. Test_Event.js
+Verifies resale legitimacy via balance checks and Event contract data.
 
-Implements unit testing on all event functions and the corresponding Ticket functions
+Handles refund voting and claiming.
 
-2. Test_Marketplace.js
+Interacts with the Event contract via an interface.
 
-Implements integration testing to ensure that the marketplace interacts accurately with Event contract
+🔜 Coming Soon
+💸 Commission fee feature to monetize the platform and incentivize upkeep.
 
-Things to add:
-add commission fee to marketplace
+🧪 Testing
+Script	Description
+Test_Event.js	Unit tests for Event.sol and its interaction with Ticket.sol.
+Test_Marketplace.js	Integration tests to ensure marketplace-to-event interactions.
+Tests are written using Hardhat + Mocha/Chai. Simulated blockchain time control is done using @nomicfoundation/hardhat-network-helpers.
+
+🔗 Future Enhancements
+Frontend interface using React + Vite
+
+IPFS integration for decentralized ticket metadata
+
+QR code generation for each unique ticket (based on ticketId)
+
+Support for multiple pricing tiers or VIP sections
+
+🛠 Tech Stack
+Solidity
+
+Hardhat (smart contract development & testing)
+
+OpenZeppelin (security & contract standards)
+
+Ethers.js (blockchain interaction)
+
+React + Vite (frontend, in progress)
+
+📄 License
+MIT License
