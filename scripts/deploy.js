@@ -39,6 +39,8 @@ async function main() {
 
   await TicketContract.setTicketPrice(NORMAL_TICKET, 10);
 
+  await MarketContract.approveOrganiser(organiser.address);
+
   console.log("Market Contract Address: ", MarketContractAddress);
   console.log("Market owner Address: ", marketplace.address);
   console.log("Ticket Contract Address: ", TicketContractAddress);

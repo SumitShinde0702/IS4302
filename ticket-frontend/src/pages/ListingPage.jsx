@@ -9,12 +9,6 @@ function OrganizersListingPage() {
 
   const [formData, setFormData] = useState({
     eventContractAddress: "",
-    eventName: "",
-    eventDate: "",
-    ticketPrice: "",
-    ticketQuantity: "",
-    eventDescription: "",
-    eventImage: "",
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -30,25 +24,22 @@ function OrganizersListingPage() {
     error: simulateError,
   } = useSimulateContract({
     address: marketplaceAddress,
-    abi: marketplaceABI,
+    abi: marketplaceABI.abi,
     functionName: "createOfficialListing",
     args: [
       formData.eventContractAddress,
-      formData.ticketQuantity ? parseInt(formData.ticketQuantity) : 0,
+      0, // let 0 be the ticket type for normal tickets first
     ],
-    enabled: Boolean(
-      formData.eventContractAddress &&
-        formData.ticketPrice &&
-        formData.ticketQuantity
-    ),
+    enabled: Boolean(formData.eventContractAddress),
   });
 
   const {
+    data: hash,
     writeContract,
+    isLoading: isWriteLoading,
     isSuccess,
     isError,
     error,
-    isLoading: isWriteLoading,
   } = useWriteContract();
 
   const handleInputChange = (e) => {
@@ -59,12 +50,18 @@ function OrganizersListingPage() {
     });
   };
 
+  const isLoading = isSimulateLoading || isWriteLoading;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
-      const hash = await writeContract(data.request);
+      if (simulateError) {
+        console.error("Simulation error:", simulateError);
+        return;
+      }
+      writeContract(data.request);
       setTransactionHash(hash);
     } catch (err) {
       console.error("Error creating listing:", err);
@@ -72,8 +69,6 @@ function OrganizersListingPage() {
       setIsSubmitting(false);
     }
   };
-
-  const isLoading = isSimulateLoading || isWriteLoading;
 
   return (
     <div className="flex justify-center items-center min-h-screen w-full bg-gray-100 py-10 px-4">
@@ -187,7 +182,7 @@ function OrganizersListingPage() {
                       </p>
                     </div>
 
-                    <div>
+                    {/* <div>
                       <label
                         htmlFor="eventName"
                         className="block text-sm font-medium text-gray-700"
@@ -263,47 +258,12 @@ function OrganizersListingPage() {
                         onChange={handleInputChange}
                         className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                       />
-                    </div>
-
-                    <div>
-                      <label
-                        htmlFor="eventDescription"
-                        className="block text-sm font-medium text-gray-700"
-                      >
-                        Event Description
-                      </label>
-                      <textarea
-                        id="eventDescription"
-                        name="eventDescription"
-                        value={formData.eventDescription}
-                        onChange={handleInputChange}
-                        rows={4}
-                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label
-                        htmlFor="eventImage"
-                        className="block text-sm font-medium text-gray-700"
-                      >
-                        Event Image URL
-                      </label>
-                      <input
-                        type="url"
-                        id="eventImage"
-                        name="eventImage"
-                        value={formData.eventImage}
-                        onChange={handleInputChange}
-                        placeholder="https://..."
-                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
+                    </div> */}
 
                     <div className="flex justify-center pt-6">
                       <button
                         type="submit"
-                        disabled={isLoading || isSubmitting || !data?.request}
+                        disabled={isLoading || isSubmitting || simulateError}
                         className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {isLoading || isSubmitting
@@ -311,6 +271,19 @@ function OrganizersListingPage() {
                           : "Create Listing"}
                       </button>
                     </div>
+
+                    {simulateError && (
+                      <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-8">
+                        <div className="flex">
+                          <div className="ml-3">
+                            <p className="text-sm text-yellow-700">
+                              Cannot create listing:{" "}
+                              {simulateError.message || "Unknown error"}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </form>
               </>
