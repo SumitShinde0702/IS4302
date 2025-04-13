@@ -34,6 +34,7 @@ contract Marketplace is Ownable, ReentrancyGuard {
         uint256 ticketId;
         uint256 quantity;
         uint256 pricePerTicket;
+        address eventContractAddress;
     }
 
     mapping(address => bool) public allowedOrganisers;
@@ -67,7 +68,8 @@ contract Marketplace is Ownable, ReentrancyGuard {
             eventName: eventName,
             ticketId: ticketId,
             quantity: initialQuantity,
-            pricePerTicket: eventContractInstance.getTicketPrice(ticketId)
+            pricePerTicket: eventContractInstance.getTicketPrice(ticketId),
+            eventContractAddress: eventContract
         });
 
         emit OfficialTicketListed(msg.sender, eventName, officialListingCount, initialQuantity);
@@ -104,7 +106,8 @@ contract Marketplace is Ownable, ReentrancyGuard {
             eventName: eventName,
             ticketId: ticketId,
             quantity: quantity,
-            pricePerTicket: ticketPrice
+            pricePerTicket: ticketPrice * 10 ** 18, // expects wei value
+            eventContractAddress: eventContract
         });
         emit ResaleTicketListed(msg.sender, eventName, resaleListingCount, quantity);
     }
@@ -141,3 +144,4 @@ contract Marketplace is Ownable, ReentrancyGuard {
         ITEventContract(eventContract).processTicketUsage(msg.sender, ticketId, quantity);
     }
 }
+    

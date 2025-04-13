@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { useAccount, useWriteContract, useSimulateContract } from "wagmi";
-import { ethers } from "ethers";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import marketplaceABI from "../contracts/MarketplaceABI.json";
 
@@ -181,84 +180,6 @@ function OrganizersListingPage() {
                         tickets
                       </p>
                     </div>
-
-                    {/* <div>
-                      <label
-                        htmlFor="eventName"
-                        className="block text-sm font-medium text-gray-700"
-                      >
-                        Event Name <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        id="eventName"
-                        name="eventName"
-                        value={formData.eventName}
-                        onChange={handleInputChange}
-                        required
-                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label
-                          htmlFor="ticketPrice"
-                          className="block text-sm font-medium text-gray-700"
-                        >
-                          Ticket Price (ETH){" "}
-                          <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="number"
-                          id="ticketPrice"
-                          name="ticketPrice"
-                          value={formData.ticketPrice}
-                          onChange={handleInputChange}
-                          step="0.0001"
-                          min="0"
-                          required
-                          className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        />
-                      </div>
-
-                      <div>
-                        <label
-                          htmlFor="ticketQuantity"
-                          className="block text-sm font-medium text-gray-700"
-                        >
-                          Number of Tickets{" "}
-                          <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="number"
-                          id="ticketQuantity"
-                          name="ticketQuantity"
-                          value={formData.ticketQuantity}
-                          onChange={handleInputChange}
-                          min="1"
-                          required
-                          className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label
-                        htmlFor="eventDate"
-                        className="block text-sm font-medium text-gray-700"
-                      >
-                        Event Date
-                      </label>
-                      <input
-                        type="date"
-                        id="eventDate"
-                        name="eventDate"
-                        value={formData.eventDate}
-                        onChange={handleInputChange}
-                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div> */}
 
                     <div className="flex justify-center pt-6">
                       <button

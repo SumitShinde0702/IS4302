@@ -56,10 +56,10 @@ contract Event is Ownable, ReentrancyGuard {
         organiser = msg.sender;
         eventDate = _eventDate;
         saleDate = _eventDate - 30 days; // arbitrary for now, can pass in as a constructor variable
-        votingPeriodStart = _eventDate + 3 days; // arbitrary event duration for now, but seems reasonable enough
+        votingPeriodStart = _eventDate + 3 days; // arbitrary event duration for now
         votingPeriodEnd = votingPeriodStart + 3 days; // arbitrary voting period for now, but seems reasonable enough
 
-        refundThreshold = 90; // arbitrary value for now, might be passed in as a constructor value later on
+        refundThreshold = 90; // arbitrary value for now, can be passed in as a constructor value too
         phase = EventPhase.PRESALE;
         ticketContract = ITicketContract(_ticketContract);
         marketPlace =_marketPlace;
@@ -89,6 +89,20 @@ contract Event is Ownable, ReentrancyGuard {
 
     function nextStage() internal {
         phase = EventPhase(uint8(phase) + 1);
+    }
+
+    function getEventPhase() public view returns(EventPhase) {
+        if (block.timestamp < saleDate) {
+            return EventPhase.PRESALE;
+        } else if (block.timestamp < eventDate) {
+            return EventPhase.SALE;
+        } else if (block.timestamp < votingPeriodStart) {
+            return EventPhase.EVENT;
+        } else if (block.timestamp < votingPeriodEnd) {
+            return EventPhase.VOTE;
+        } else {
+            return EventPhase.END;
+        }
     }
 
     function getTicketPrice(uint256 _ticketId) public view returns (uint256) {
@@ -195,7 +209,6 @@ contract Event is Ownable, ReentrancyGuard {
         uint256 numberOfTickets,
         uint256 pricePerTicket
     ) external payable timedTransitions atPhase(EventPhase.SALE) isApprovedPlatform nonReentrant {
-        pricePerTicket *= 10 ** 18; // convert to wei
         require(pricePerTicket <= getTicketPrice(ticketId), "Price cap exceeded"); // price cap is just original ticket price for now
         require(ticketContract.balanceOf(seller, ticketId) >= numberOfTickets, "Not enough tickets to sell");
 

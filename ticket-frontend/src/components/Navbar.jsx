@@ -1,7 +1,7 @@
 // src/components/Navbar.jsx
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
+import React from "react";
+import { Link } from "react-router-dom";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 
 function Navbar() {
   return (
@@ -10,7 +10,9 @@ function Navbar() {
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             <Link to="/" className="flex-shrink-0 flex items-center">
-              <span className="text-xl font-bold text-blue-600">TicketChain</span>
+              <span className="text-xl font-bold text-blue-600">
+                TicketChain
+              </span>
             </Link>
             <div className="hidden md:ml-6 md:flex md:space-x-8">
               <Link
@@ -24,6 +26,25 @@ function Navbar() {
                 className="border-transparent text-gray-500 hover:border-blue-500 hover:text-blue-600 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
               >
                 Create Listing
+              </Link>
+              <Link
+                to="/create-resale-listing"
+                className="border-transparent text-gray-500 hover:border-blue-500 hover:text-blue-600 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+              >
+                Create Resale Listing
+              </Link>
+              <Link
+                to="/use-tickets"
+                className="border-transparent text-gray-500 hover:border-blue-500 hover:text-blue-600 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+              >
+                Use Tickets
+              </Link>
+
+              <Link
+                to="/refund"
+                className="border-transparent text-gray-500 hover:border-blue-500 hover:text-blue-600 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+              >
+                Refund Functions
               </Link>
               {/* Add more navigation links as you build your app */}
             </div>
