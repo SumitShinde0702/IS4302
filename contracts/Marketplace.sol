@@ -96,17 +96,19 @@ contract Marketplace is Ownable, ReentrancyGuard {
     ///         quite a bit of complexity, so i may not want to implement that. can consider next time
     function createResaleListing(address eventContract, uint256 ticketPrice, uint256 ticketId, uint256 quantity) external {
         ITEventContract eventContractInstance = ITEventContract(eventContract);
+        ticketPrice = ticketPrice * 10 ** 18; // convert to wei
         // ensure seller actually owns enough of the particular ticket, prevents counterfeits from being listed
         require(eventContractInstance.getAccountBalance(msg.sender, ticketId) >= quantity, "Insufficient tickets owned!");
         // ensure that user has already approved the event contract to transfer tickets on their behalf
         require(eventContractInstance.checkApproval(msg.sender), "Please approve the Event contract to transfer your tokens first!");
+        require(ticketPrice <= eventContractInstance.getTicketPrice(ticketId), "Resale price cannot be higher than official price");
         string memory eventName = eventContractInstance.eventName();
         resaleListings[++resaleListingCount] = Listing({
             seller: msg.sender,
             eventName: eventName,
             ticketId: ticketId,
             quantity: quantity,
-            pricePerTicket: ticketPrice * 10 ** 18, // expects wei value
+            pricePerTicket: ticketPrice,
             eventContractAddress: eventContract
         });
         emit ResaleTicketListed(msg.sender, eventName, resaleListingCount, quantity);

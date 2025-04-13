@@ -135,7 +135,7 @@ describe("Test Event & Ticket", function () {
         user2.address,
         NORMAL_TICKET,
         1,
-        11,
+        ethers.parseEther("11"),
         {
           value: ethers.parseEther("11"),
         }
@@ -149,7 +149,7 @@ describe("Test Event & Ticket", function () {
         user2.address,
         NORMAL_TICKET,
         2,
-        9,
+        ethers.parseEther("9"),
         {
           value: ethers.parseEther("9"),
         }
@@ -163,7 +163,7 @@ describe("Test Event & Ticket", function () {
         user2.address,
         NORMAL_TICKET,
         1,
-        9,
+        ethers.parseEther("9"),
         {
           value: ethers.parseEther("8"),
         }
@@ -177,7 +177,7 @@ describe("Test Event & Ticket", function () {
         user2.address,
         NORMAL_TICKET,
         1,
-        9,
+        ethers.parseEther("9"),
         {
           value: ethers.parseEther("10"),
         }

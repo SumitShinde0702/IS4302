@@ -163,6 +163,15 @@ describe("Test MarketPlace functions", function () {
 
     TicketContract.connect(user4).setApprovalForAll(EventContractAddress, true);
 
+    await expect(
+      MarketContract.connect(user4).createResaleListing(
+        EventContractAddress,
+        11,
+        NORMAL_TICKET,
+        2
+      )
+    ).to.be.revertedWith("Resale price cannot be higher than official price");
+
     expect(
       await MarketContract.connect(user4).createResaleListing(
         EventContractAddress,
@@ -203,7 +212,11 @@ describe("Test MarketPlace functions", function () {
     await time.increaseTo(eventStart);
 
     await expect(
-      MarketContract.connect(user4).useTicket(EventContractAddress, NORMAL_TICKET, 2)
+      MarketContract.connect(user4).useTicket(
+        EventContractAddress,
+        NORMAL_TICKET,
+        2
+      )
     )
       .to.emit(EventContract, "TicketUsed")
       .withArgs(user4.address, 2, NORMAL_TICKET);
