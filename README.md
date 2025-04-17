@@ -15,8 +15,6 @@ Time-based sales and refund mechanisms
 
 Decentralized refund voting in case of event disruption
 
-QR-code-based validation (off-chain)
-
 Modular contract architecture
 
 🔁 System Flow
@@ -31,8 +29,9 @@ Once whitelisted, the organiser creates listings for ticket sales.
 Buyers and Resellers interact through the Marketplace, enabling secure official and secondary sales.
 
 📦 Smart Contracts
+
 1. Ticket.sol
-ERC-1155 Token Contract (for tickets)
+   ERC-1155 Token Contract (for tickets)
 
 Implements OpenZeppelin’s ERC1155 standard for minting tickets.
 
@@ -43,7 +42,7 @@ Transfers restricted — only the designated Marketplace contract can transfer t
 Linked to the Event contract after deployment via setEventContract().
 
 2. Event.sol
-Event Management Contract
+   Event Management Contract
 
 Manages ticket sales, usage, refunds, and voting.
 
@@ -56,7 +55,7 @@ Interacts with the Ticket contract through an interface.
 Deployed with ticket and event terms in the constructor.
 
 3. Marketplace.sol
-Official and Resale Marketplace Contract
+   Official and Resale Marketplace Contract
 
 Enables ticket listings, purchases, and resales.
 
@@ -68,23 +67,16 @@ Handles refund voting and claiming.
 
 Interacts with the Event contract via an interface.
 
-🔜 Coming Soon
-💸 Commission fee feature to monetize the platform and incentivize upkeep.
-
 🧪 Testing
-Script	Description
-Test_Event.js	Unit tests for Event.sol and its interaction with Ticket.sol.
-Test_Marketplace.js	Integration tests to ensure marketplace-to-event interactions.
+Script Description
+Test_Event.js Unit tests for Event.sol and its interaction with Ticket.sol.
+Test_Marketplace.js Integration tests to ensure marketplace-to-event interactions.
 Tests are written using Hardhat + Mocha/Chai. Simulated blockchain time control is done using @nomicfoundation/hardhat-network-helpers.
 
-🔗 Future Enhancements
+🔗 Frontend
 Frontend interface using React + Vite
 
-IPFS integration for decentralized ticket metadata
-
-QR code generation for each unique ticket (based on ticketId)
-
-Support for multiple pricing tiers or VIP sections
+Uses Wagmi library for interaction with Metamask wallets and Smart Contract Function interaction
 
 🛠 Tech Stack
 Solidity
@@ -95,7 +87,7 @@ OpenZeppelin (security & contract standards)
 
 Ethers.js (blockchain interaction)
 
-React + Vite (frontend, in progress)
+React + Vite (frontend)
 
 📄 License
 MIT License
