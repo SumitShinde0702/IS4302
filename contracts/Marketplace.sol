@@ -4,88 +4,146 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-/// @notice Minimal interface for interacting with the Ticket contract.
-interface ITicketContract {
-    function safeTransferFrom(address from, address to, uint256 id, uint256 amount, bytes calldata data) external;
-    function balanceOf(address account, uint256 id) external view returns (uint256);
+/// @notice Minimal interface for interacting with the Event contract. The event contract will be owned
+///        by the organizer and will be used to handle ticket processing & other functionalities
+interface ITEventContract {
+    function processOfficialSale(address buyer, uint256 ticketId, uint256 numberOfTickets) external payable;
+    function processResale(address seller, address buyer, uint256 ticketId, uint256 numberOfTickets, uint256 pricePerTicket) external payable;
+    function vote (address ticketHolder) external;
+    function handleRefund(address ticketHolder) external;
+    function getTicketPrice(uint256 ticketId) external view returns (uint256);
+    function getTicketQuantity(uint256 ticketId) external view returns (uint256);
+    function getAccountBalance(address _address, uint256 ticketId) external view returns (uint256);
+    function eventName() external view returns (string memory);
+    function checkApproval(address seller) external view returns (bool);
+    function processTicketUsage(address ticketHolder, uint256 ticketId, uint256 numberOfTickets) external;
 }
 
 /// @title Marketplace
-/// @notice Allows ticket holders to list tickets for resale with a maximum price cap set by the admin.
+/// @notice Should allow multiple events to list their tickets for sale at any given time
+///         facilitates all the ticket transactions for official sale and resale, conducts legitimacy checks automatically
+///         organisers who want to list their tickets will follow the flow:
+///         1. apply for permission to list (marketplace will whitelist their address)
+///         2. Create a listing of all their tickets, tickets need not be trasnferred to the marketplace
+///         can consider creating a commission fee for the transactions happening in the marketplace
 contract Marketplace is Ownable, ReentrancyGuard {
-    ITicketContract public ticketContract;
-    // Maps a ticket id to its maximum allowed resale price.
-    mapping(uint256 => uint256) public maxResalePrice;
 
     struct Listing {
         address seller;
+        string eventName;
         uint256 ticketId;
         uint256 quantity;
         uint256 pricePerTicket;
+        address eventContractAddress;
     }
 
-    uint256 public listingCount;
-    mapping(uint256 => Listing) public listings;
+    mapping(address => bool) public allowedOrganisers;
+    mapping(uint256 => Listing) public officialListings;
+    uint256 public officialListingCount;
 
-    /// @notice Constructor sets the Ticket contract address and assigns the deployer as owner.
-    constructor(address _ticketContract) Ownable(msg.sender) {
-        ticketContract = ITicketContract(_ticketContract);
+    mapping(uint256 => Listing) public resaleListings;
+    uint256 public resaleListingCount;
+
+    event OfficialTicketListed(address organiser, string eventName, uint256 listingId, uint256 quantity);
+    event OfficialTicketPurchased(address buyer, string eventName, uint256 listingId, uint256 quantity);
+    event ResaleTicketListed(address seller, string eventName, uint256 listingId, uint256 quantity);
+    event ResaleTicketPurchased(address buyer, string eventName, uint256 listingId, uint256 quantity);
+
+    constructor() Ownable(msg.sender) {}
+
+    /// @notice allows the owner (us) to approve an organiser to list their tickets
+    function approveOrganiser(address Organiser) external onlyOwner {
+        allowedOrganisers[Organiser] = true;
     }
 
-    /// @notice Sets the maximum allowed resale price for a given ticket id.
-    /// @param ticketId The ticket identifier.
-    /// @param price The maximum resale price.
-    function setMaxResalePrice(uint256 ticketId, uint256 price) external onlyOwner {
-        maxResalePrice[ticketId] = price;
-    }
+    /// @notice Lists tickets for official sale, will be called by event organiser.
+    function createOfficialListing(address eventContract, uint256 ticketId) external {
+        require(allowedOrganisers[msg.sender], "Organiser is not approved");
 
-    /// @notice Lists tickets for sale. Tickets are transferred into escrow.
-    function createListing(
-        uint256 ticketId,
-        uint256 quantity,
-        uint256 pricePerTicket
-    ) external nonReentrant {
-        require(pricePerTicket <= maxResalePrice[ticketId], "Price exceeds allowed maximum");
-        require(ticketContract.balanceOf(msg.sender, ticketId) >= quantity, "Insufficient ticket balance");
-
-        // Transfer tickets from seller to the marketplace (escrow).
-        ticketContract.safeTransferFrom(msg.sender, address(this), ticketId, quantity, "");
-
-        listings[listingCount] = Listing({
+        ITEventContract eventContractInstance = ITEventContract(eventContract);
+        uint256 initialQuantity = eventContractInstance.getTicketQuantity(ticketId);
+        string memory eventName = eventContractInstance.eventName();
+        officialListings[++officialListingCount] = Listing({
             seller: msg.sender,
+            eventName: eventName,
             ticketId: ticketId,
-            quantity: quantity,
-            pricePerTicket: pricePerTicket
+            quantity: initialQuantity,
+            pricePerTicket: eventContractInstance.getTicketPrice(ticketId),
+            eventContractAddress: eventContract
         });
-        listingCount++;
+
+        emit OfficialTicketListed(msg.sender, eventName, officialListingCount, initialQuantity);
     }
 
     /// @notice Purchases tickets from an active listing.
-    function buyTicket(uint256 listingId, uint256 quantity) external payable nonReentrant {
-        Listing storage listing = listings[listingId];
+    function buyOfficialTicket(address eventContract, uint256 listingId, uint256 quantity) external payable nonReentrant {
+        Listing storage listing = officialListings[listingId];
         require(quantity > 0 && quantity <= listing.quantity, "Invalid quantity requested");
 
-        uint256 totalPrice = listing.pricePerTicket * quantity;
-        require(msg.value == totalPrice, "Incorrect ETH sent");
-
-        // Transfer tickets from escrow to the buyer.
-        ticketContract.safeTransferFrom(address(this), msg.sender, listing.ticketId, quantity, "");
-        // Forward funds to the seller.
-        payable(listing.seller).transfer(totalPrice);
+        ITEventContract eventContractInstance = ITEventContract(eventContract);
+        eventContractInstance.processOfficialSale{value: msg.value}(msg.sender, listing.ticketId, quantity);
 
         listing.quantity -= quantity;
         if (listing.quantity == 0) {
-            delete listings[listingId];
+            delete officialListings[listingId];
         }
+
+        emit OfficialTicketPurchased(msg.sender, eventContractInstance.eventName(), listingId, quantity);
+    } 
+
+    /// @notice lists tickets currently owned for resale to the general population
+    ///         can consider creating an array of addresses/usernames to allow targeted sales, as direct transfers introduces 
+    ///         quite a bit of complexity, so i may not want to implement that. can consider next time
+    function createResaleListing(address eventContract, uint256 ticketPrice, uint256 ticketId, uint256 quantity) external {
+        ITEventContract eventContractInstance = ITEventContract(eventContract);
+        ticketPrice = ticketPrice * 10 ** 18; // convert to wei
+        // ensure seller actually owns enough of the particular ticket, prevents counterfeits from being listed
+        require(eventContractInstance.getAccountBalance(msg.sender, ticketId) >= quantity, "Insufficient tickets owned!");
+        // ensure that user has already approved the event contract to transfer tickets on their behalf
+        require(eventContractInstance.checkApproval(msg.sender), "Please approve the Event contract to transfer your tokens first!");
+        require(ticketPrice <= eventContractInstance.getTicketPrice(ticketId), "Resale price cannot be higher than official price");
+        string memory eventName = eventContractInstance.eventName();
+        resaleListings[++resaleListingCount] = Listing({
+            seller: msg.sender,
+            eventName: eventName,
+            ticketId: ticketId,
+            quantity: quantity,
+            pricePerTicket: ticketPrice,
+            eventContractAddress: eventContract
+        });
+        emit ResaleTicketListed(msg.sender, eventName, resaleListingCount, quantity);
     }
 
-    /// @notice Cancels an active listing and returns tickets to the seller.
-    function cancelListing(uint256 listingId) external nonReentrant {
-        Listing storage listing = listings[listingId];
-        require(msg.sender == listing.seller, "Only seller can cancel listing");
+    /// @notice Purchases tickets from a resale listing.
+    function buyResaleTicket(address eventContract, uint256 listingId, uint256 quantity) external payable nonReentrant {
+        ITEventContract eventContractInstance = ITEventContract(eventContract);
+        Listing storage listing = resaleListings[listingId];
+        require(quantity > 0 && quantity <= listing.quantity, "Invalid quantity requested");
 
-        uint256 quantity = listing.quantity;
-        ticketContract.safeTransferFrom(address(this), listing.seller, listing.ticketId, quantity, "");
-        delete listings[listingId];
+        eventContractInstance.processResale{value: msg.value}(listing.seller, msg.sender, listing.ticketId, quantity, listing.pricePerTicket);
+
+        listing.quantity -= quantity;
+        if (listing.quantity == 0) {
+            delete resaleListings[listingId];
+        }
+        emit ResaleTicketPurchased(msg.sender, eventContractInstance.eventName(), listingId, quantity);
+    }
+
+    /// @notice Allows ticket holders to vote for refund after event has ended. No vote should be cast if
+    ///         refund not required. Checks are done on the Event contract side, but should only be shown to ticketholders
+    ///         at the appropriate phase of the event (VOTE phase)
+    function voteForRefund(address eventContract) external {
+        ITEventContract(eventContract).vote(msg.sender);
+    }
+
+    /// @notice Allows ticket holders to claim their refund after the refund vote has passed
+    function claimRefund(address eventContract) external {
+        ITEventContract(eventContract).handleRefund(msg.sender);
+    }
+
+    /// @notice Usage of tickets for ticketholders
+    function useTicket(address eventContract, uint256 ticketId, uint256 quantity) external {
+        ITEventContract(eventContract).processTicketUsage(msg.sender, ticketId, quantity);
     }
 }
+    
