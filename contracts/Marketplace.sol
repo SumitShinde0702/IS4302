@@ -86,6 +86,7 @@ contract Marketplace is Ownable, ReentrancyGuard {
         listing.quantity -= quantity;
         if (listing.quantity == 0) {
             delete officialListings[listingId];
+            officialListingCount--;
         }
 
         emit OfficialTicketPurchased(msg.sender, eventContractInstance.eventName(), listingId, quantity);
@@ -125,6 +126,7 @@ contract Marketplace is Ownable, ReentrancyGuard {
         listing.quantity -= quantity;
         if (listing.quantity == 0) {
             delete resaleListings[listingId];
+            resaleListingCount--;
         }
         emit ResaleTicketPurchased(msg.sender, eventContractInstance.eventName(), listingId, quantity);
     }
